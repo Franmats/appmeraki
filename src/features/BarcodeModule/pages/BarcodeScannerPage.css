@@ -1,0 +1,69 @@
+/* BarcodeScannerPage.css */
+
+.scanner-page {
+  width: 100%;
+  max-width: 420px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Header */
+.scanner-header {
+  text-align: center;
+}
+
+.scanner-header h2 {
+  font-size: 1.4rem;
+}
+
+.scanner-header p {
+  font-size: 0.95rem;
+  margin-top: 0.4rem;
+}
+
+/* Camera container */
+.scanner-camera {
+  background: var(--bg-soft);
+  border-radius: var(--radius-lg);
+  padding: 1rem;
+  box-shadow: var(--shadow-soft);
+  display: flex;
+  justify-content: center;
+}
+
+/* Result card */
+.scanner-result {
+  background: #ffffff;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-lg);
+  padding: 1.2rem;
+  box-shadow: var(--shadow-soft);
+}
+
+.scanner-result h3 {
+  font-size: 1.1rem;
+  margin-bottom: 0.4rem;
+}
+
+.scanner-result .price {
+  margin-top: 0.6rem;
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+/* States */
+.scanner-loading,
+.scanner-error {
+  text-align: center;
+  font-size: 0.95rem;
+  color: var(--text-muted);
+}
+
+/* Desktop enhancements */
+@media (min-width: 768px) {
+  .scanner-page {
+    max-width: 480px;
+  }
+}
