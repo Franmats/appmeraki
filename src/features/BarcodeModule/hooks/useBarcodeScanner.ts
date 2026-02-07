@@ -20,7 +20,7 @@ export function useBarcodeScanner() {
       if (e instanceof Error && e.message === "PRODUCT_NOT_FOUND") {
         setError("Producto no encontrado")
       } else {
-        setError("No se pudo buscar el producto")
+        setError("Producto no encontrado")
       }
     } finally {
       setLoading(false)

@@ -11,7 +11,7 @@ export async function getProductByBarcode(
 
   const data = await res.json()
 
-  if (res.status === 400) {
+  if (!res.ok) {
     throw new Error(data?.error || "Producto no encontrado")
   }
 
