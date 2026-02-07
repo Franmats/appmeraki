@@ -5,7 +5,7 @@ export async function getProductByBarcode(
   barcode: string
 ): Promise<Product | null> {
   const res = await fetch(
-    `https://tu-api.com/productos/barcode/${barcode}`,
+    `https://router.sgilibra.com:9443/api/productos/${(barcode)}`,
     { credentials: "include" }
   )
 
