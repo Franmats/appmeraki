@@ -42,10 +42,10 @@ export default function BarcodeScannerPage() {
 
       <div className="scanner-camera">
         <BarcodeScannerComponent
-          width={300}
-          height={300}
-          onUpdate={handleUpdate}
-        />
+    width={window.innerWidth}
+    height={window.innerHeight * 0.7}
+    onUpdate={handleUpdate}
+  />
       </div>
 
       {loading && (
