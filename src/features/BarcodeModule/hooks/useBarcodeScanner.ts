@@ -11,12 +11,17 @@ export function useBarcodeScanner() {
   const searchByBarcode = async (barcode: string) => {
     setLoading(true)
     setError(null)
+    setProduct(null)
 
     try {
       const result = await findProduct(barcode)
       setProduct(result)
     } catch (e) {
-      setError("No se pudo buscar el producto")
+      if (e instanceof Error && e.message === "PRODUCT_NOT_FOUND") {
+        setError("Producto no encontrado")
+      } else {
+        setError("No se pudo buscar el producto")
+      }
     } finally {
       setLoading(false)
     }
