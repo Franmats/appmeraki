@@ -1,3 +1,4 @@
+import { useRef, useCallback } from "react"
 import BarcodeScannerComponent from "react-qr-barcode-scanner"
 import { useBarcodeScanner } from "../hooks/useBarcodeScanner"
 import "./BarcodeScannerPage.css"
@@ -5,6 +6,32 @@ import "./BarcodeScannerPage.css"
 export default function BarcodeScannerPage() {
   const { product, loading, error, searchByBarcode } =
     useBarcodeScanner()
+
+  const lastCodeRef = useRef<string | null>(null)
+  const isProcessingRef = useRef(false)
+
+  const handleUpdate = useCallback(
+    (err: unknown, result: any) => {
+      if (err || !result) return
+
+      const code = result.getText()
+
+      // Evitar lecturas duplicadas
+      if (
+        code === lastCodeRef.current ||
+        isProcessingRef.current
+      )
+        return
+
+      lastCodeRef.current = code
+      isProcessingRef.current = true
+
+      searchByBarcode(code).finally(() => {
+        isProcessingRef.current = false
+      })
+    },
+    [searchByBarcode]
+  )
 
   return (
     <div className="scanner-page">
@@ -17,9 +44,7 @@ export default function BarcodeScannerPage() {
         <BarcodeScannerComponent
           width={300}
           height={300}
-          onUpdate={(err, result) => {
-            if (result) searchByBarcode(result.getText())
-          }}
+          onUpdate={handleUpdate}
         />
       </div>
 
@@ -27,14 +52,16 @@ export default function BarcodeScannerPage() {
         <p className="scanner-loading">Buscando producto…</p>
       )}
 
-      {product && (
+      {product && !loading && (
         <div className="scanner-result">
           <h3>{product.descripcion}</h3>
           <p className="price">${product.precio}</p>
         </div>
       )}
 
-      {error && <p className="scanner-error">{error}</p>}
+      {error && !loading && (
+        <p className="scanner-error">{error}</p>
+      )}
     </div>
   )
 }
