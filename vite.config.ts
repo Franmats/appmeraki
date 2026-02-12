@@ -9,9 +9,9 @@ export default defineConfig({
   registerType: 'autoUpdate',
   includeAssets: ['favicon.ico'],
   manifest: {
-    name: 'Mi App',
-    short_name: 'MiApp',
-    description: 'Aplicación web',
+    name: 'Lector de Codigos',
+    short_name: 'Lector de Codigos',
+    description: 'App Web',
     theme_color: '#4f46e5',
     background_color: '#ffffff',
     display: 'standalone',
