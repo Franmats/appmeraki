@@ -4,4 +4,5 @@ export interface Product {
   descripcion: string
   codigo: string
   precio: number
+  stock:number
 }
