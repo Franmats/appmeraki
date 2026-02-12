@@ -1,6 +1,7 @@
 import { useRef, useCallback } from "react"
 import BarcodeScannerComponent from "react-qr-barcode-scanner"
 import { useBarcodeScanner } from "../hooks/useBarcodeScanner"
+import { LogoutButton } from "../../../LogoutButton/LogoutButton"
 import "./BarcodeScannerPage.css"
 
 export default function BarcodeScannerPage() {
@@ -77,6 +78,7 @@ export default function BarcodeScannerPage() {
           <p className="scanner-error">{error}</p>
         )}
       </div>
+      <LogoutButton/>
     </div>
   )
 }
