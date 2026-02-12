@@ -26,6 +26,7 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   const getToken = (): string | null => {
     try {
       const storedToken = window.localStorage.getItem("token");
+    
       return storedToken ? JSON.parse(storedToken) : null;
     } catch {
       return null;
@@ -62,7 +63,6 @@ const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           navigate("/login", { replace: true });
         }
       } catch (error) {
-        console.error("Error en autenticación:", error);
         window.localStorage.removeItem("token");
         setIsAuthenticated(false);
         navigate("/login", { replace: true });

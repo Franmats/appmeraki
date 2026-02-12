@@ -16,7 +16,6 @@ export default function BarcodeScannerPage() {
 
       const code = result.getText()
 
-      // Evitar lecturas duplicadas
       if (
         code === lastCodeRef.current ||
         isProcessingRef.current
@@ -35,34 +34,49 @@ export default function BarcodeScannerPage() {
 
   return (
     <div className="scanner-page">
+      {/* Header */}
       <div className="scanner-header">
         <h2>Escanear producto</h2>
         <p>Apuntá al código de barras</p>
       </div>
 
-      <div className="scanner-camera">
+      {/* Cámara */}
+      <div
+        className={`scanner-camera ${
+          product ? "has-result" : ""
+        }`}
+      >
         <BarcodeScannerComponent
-    width={280}
-    height={260}
-    onUpdate={handleUpdate}
-  />
+          width={"100%"}
+          height={"100%"}
+          onUpdate={handleUpdate}
+        />
       </div>
 
-      {loading && (
-        <p className="scanner-loading">Buscando producto…</p>
-      )}
+      {/* Panel inferior */}
+      <div className="scanner-bottom">
+        {loading && (
+          <p className="scanner-loading">
+            Buscando producto…
+          </p>
+        )}
 
-      {product && !loading && (
-        <div className="scanner-result">
-          <h3>{product.descripcion}</h3>
-          <p className="price">${product.precio}</p>
-          <p> Stock {product.stock}</p>
-        </div>
-      )}
+        {product && !loading && (
+          <div className="scanner-result">
+            <h3>{product.descripcion}</h3>
+            <p className="price">
+              ${Number(product.precio).toLocaleString()}
+            </p>
+            <p className="stock">
+              Stock disponible: {product.stock}
+            </p>
+          </div>
+        )}
 
-      {error && !loading && (
-        <p className="scanner-error">{error}</p>
-      )}
+        {error && !loading && (
+          <p className="scanner-error">{error}</p>
+        )}
+      </div>
     </div>
   )
 }

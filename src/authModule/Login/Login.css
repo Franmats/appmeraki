@@ -10,7 +10,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  padding: 16px;
+  padding: 30px;
   background: radial-gradient(circle at top, #818cf8 0, #4f46e5 30%, #1e293b 100%);
 }
 
@@ -86,7 +86,7 @@
 .login-form input:focus {
   border-color: #6366f1;
   box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.6);
-  background-color: #000000;
+  background-color: #ffffff;
 }
 
 .login-form input::placeholder {

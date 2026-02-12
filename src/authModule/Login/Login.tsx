@@ -1,33 +1,23 @@
-import React, { useState } from "react";
-import type { ChangeEvent, FormEvent } from "react";
+import React, { useState, useEffect, } from "react";
+import type {ChangeEvent, FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import "./Login.css";
 
-/* =======================
-   Tipos
-======================= */
-
 interface LoginForm {
-  email: string;
+  name: string;
   password: string;
 }
 
-interface LoginPayload {
-  token: string;
-}
-
 interface LoginResponse {
-  payload: LoginPayload;
-  status?: string;
+  payload: {
+    token: string;
+  };
+  message?: string;
 }
-
-/* =======================
-   Componente
-======================= */
 
 export const Login: React.FC = () => {
   const [form, setForm] = useState<LoginForm>({
-    email: "",
+    name: "",
     password: "",
   });
 
@@ -38,21 +28,37 @@ export const Login: React.FC = () => {
   const navigate = useNavigate();
   const apiUrl = import.meta.env.VITE_API_URL as string;
 
-  /* =======================
-     Handlers
-  ======================= */
+  const localStorageSetItem = (token: any): void => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("token", JSON.stringify(token));
+    }
+  };
+
+  const tokenExtractor = (): string | null => {
+    try {
+      if (typeof window !== "undefined") {
+        return window.localStorage.getItem("token");
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  };
+
+  // ✅ Redirección automática si ya existe token
+  useEffect(() => {
+    const token = tokenExtractor();
+    if (token) {
+      navigate("/");
+    }
+  }, [navigate]);
 
   const handleChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    setForm((prev) => ({ ...prev, [name]: value.toLocaleUpperCase() }));
   };
 
-  const handleSubmit = async (
-    e: FormEvent<HTMLFormElement>
-  ): Promise<void> => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setError(null);
     setMessage(null);
@@ -64,26 +70,24 @@ export const Login: React.FC = () => {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(form), // { email, password }
+        body: JSON.stringify(form), // { name, password }
       });
 
       const result: LoginResponse = await response.json();
-
       if (!response.ok) {
-        throw new Error(result.status || "Credenciales incorrectas");
+        window.localStorage.removeItem("token");
+        throw new Error(result.message || "Credenciales incorrectas");
       }
 
-      // Guardamos SOLO el token
-      window.localStorage.setItem(
-        "token",
-        JSON.stringify(result.payload.token)
-      );
+      // Guardamos solo el token
+      localStorageSetItem(result.payload);
 
       setMessage("Inicio de sesión exitoso");
 
       setTimeout(() => {
-        navigate("/protected");
-      }, 1000);
+        navigate("/");
+      }, 1200);
+
     } catch (err) {
       window.localStorage.removeItem("token");
       setError(
@@ -96,10 +100,6 @@ export const Login: React.FC = () => {
     }
   };
 
-  /* =======================
-     Render
-  ======================= */
-
   return (
     <div className="login-container">
       <form className="login-form" onSubmit={handleSubmit}>
@@ -107,7 +107,7 @@ export const Login: React.FC = () => {
           <div className="login-logo-circle">CD</div>
           <div>
             <h2>Iniciar sesión</h2>
-            <p className="login-subtitle">Accedé a tu app</p>
+            <p className="login-subtitle">Accedé a tu Lector de Codigos</p>
           </div>
         </div>
 
@@ -115,12 +115,12 @@ export const Login: React.FC = () => {
         {message && <p className="alert alert-success">{message}</p>}
 
         <label className="login-label">
-          Correo electrónico
+          Nombre de usuario
           <input
-            type="email"
-            name="email"
-            placeholder="ejemplo@correo.com"
-            value={form.email}
+            type="text"
+            name="name"
+            placeholder="Tu usuario"
+            value={form.name}
             onChange={handleChange}
             required
           />
@@ -131,6 +131,7 @@ export const Login: React.FC = () => {
           <input
             type="password"
             name="password"
+            placeholder="Tu contraseña"
             value={form.password}
             onChange={handleChange}
             required
@@ -140,6 +141,10 @@ export const Login: React.FC = () => {
         <button type="submit" disabled={isSubmitting}>
           {isSubmitting ? "Ingresando..." : "Entrar"}
         </button>
+
+        <p className="info-text">
+          Verificá que el usuario y la contraseña sean correctos.
+        </p>
       </form>
     </div>
   );
