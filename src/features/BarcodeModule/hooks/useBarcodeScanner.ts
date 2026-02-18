@@ -15,7 +15,6 @@ export function useBarcodeScanner() {
 
     try {
       const result = await findProduct(barcode)
-      console.log("Producto encontrado:", result)
       setProduct(result)
     } catch (e) {
       if (e instanceof Error && e.message === "PRODUCT_NOT_FOUND") {
