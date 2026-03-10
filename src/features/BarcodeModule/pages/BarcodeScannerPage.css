@@ -35,9 +35,15 @@
   transition: all 0.3s ease;
 }
 
-/* Se reduce cuando aparece producto */
 .scanner-camera.has-result {
   flex: 0 0 40%;
+}
+
+/* El componente renderiza un <video> adentro */
+.scanner-camera video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
 }
 
 /* Marco */
@@ -52,35 +58,103 @@
   border: 3px solid rgba(0, 0, 0, 0.6);
   border-radius: 1rem;
   pointer-events: none;
+  z-index: 5;
 }
 
+/* Línea de escaneo animada */
 .scanner-camera::after {
   content: "";
   position: absolute;
   width: 70%;
   height: 3px;
-  background: linear-gradient(
-    90deg,
-    transparent,
-    #22c55e,
-    transparent
-  );
+  background: linear-gradient(90deg, transparent, #22c55e, transparent);
   top: 50%;
   left: 50%;
   transform: translateX(-50%);
   animation: scanLine 2s infinite;
+  z-index: 5;
 }
 
 @keyframes scanLine {
-  0% {
-    transform: translate(-50%, -100px);
-  }
-  50% {
-    transform: translate(-50%, 100px);
-  }
-  100% {
-    transform: translate(-50%, -100px);
-  }
+  0%   { transform: translate(-50%, -100px); }
+  50%  { transform: translate(-50%, 100px); }
+  100% { transform: translate(-50%, -100px); }
+}
+
+/* === Botón linterna === */
+.scanner-torch-btn {
+  position: absolute;
+  bottom: 14px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  font-size: 1.2rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+  -webkit-tap-highlight-color: transparent;
+  z-index: 10;
+}
+
+.scanner-torch-btn:active {
+  transform: scale(0.92);
+}
+
+.scanner-torch-btn.active {
+  background: rgba(255, 220, 50, 0.35);
+  box-shadow: 0 0 14px rgba(255, 220, 50, 0.55);
+}
+
+/* === Control de zoom (solo Android/Chrome) === */
+.scanner-zoom {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  background: #f0f0f0;
+  border-bottom: 1px solid #e5e7eb;
+  flex-shrink: 0;
+}
+
+.zoom-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.scanner-zoom input[type="range"] {
+  flex: 1;
+  height: 4px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: #d1d5db;
+  border-radius: 2px;
+  outline: none;
+  accent-color: #16a34a;
+}
+
+.scanner-zoom input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #16a34a;
+  cursor: pointer;
+  box-shadow: 0 0 6px rgba(22, 163, 74, 0.4);
+}
+
+.zoom-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+  min-width: 36px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* === Panel inferior === */
@@ -104,9 +178,7 @@
 }
 
 @keyframes blink {
-  50% {
-    opacity: 0.5;
-  }
+  50% { opacity: 0.5; }
 }
 
 /* === Resultado === */
