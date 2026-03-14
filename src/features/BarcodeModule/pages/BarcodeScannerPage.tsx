@@ -7,20 +7,22 @@ import "./BarcodeScannerPage.css"
 export default function BarcodeScannerPage() {
   const { product, loading, error, searchByBarcode } = useBarcodeScanner()
 
-  const lastCodeRef      = useRef<string | null>(null)
-  const isProcessingRef  = useRef(false)
-  const resetTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const cameraWrapRef    = useRef<HTMLDivElement>(null)
-  const pollRef          = useRef<ReturnType<typeof setInterval> | null>(null)
+  const lastCodeRef       = useRef<string | null>(null)
+  const isProcessingRef   = useRef(false)
+  const resetTimerRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cameraWrapRef     = useRef<HTMLDivElement>(null)
+  const pollRef           = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const [zoom, setZoom]                   = useState(1)
-  const [zoomSupported, setZoomSupported] = useState(false)
-  const [zoomRange, setZoomRange]         = useState({ min: 1, max: 4 })
-  const [torchOn, setTorchOn]             = useState(false)
+  const [zoom, setZoom]                     = useState(1)
+  const [zoomSupported, setZoomSupported]   = useState(false)
+  const [zoomRange, setZoomRange]           = useState({ min: 1, max: 4 })
+  const [torchOn, setTorchOn]               = useState(false)
   const [torchSupported, setTorchSupported] = useState(false)
 
-  // ─── Obtiene el track desde el <video> que monta BarcodeScannerComponent ───
-  // No abre un stream propio: reutiliza el que ya existe en el DOM.
+  // DEBUG
+  const [debugCode, setDebugCode]   = useState<string>("")
+  const [debugError, setDebugError] = useState<string>("")
+
   const getTrack = useCallback((): MediaStreamTrack | null => {
     const video = cameraWrapRef.current?.querySelector("video")
     if (!video) return null
@@ -28,13 +30,11 @@ export default function BarcodeScannerPage() {
     return stream?.getVideoTracks()[0] ?? null
   }, [])
 
-  // Polling hasta que el <video> tenga su stream listo (ocurre unos ms después del mount)
   useEffect(() => {
     pollRef.current = setInterval(() => {
       const track = getTrack()
       if (!track) return
 
-      // Stream encontrado — dejamos de hacer polling
       clearInterval(pollRef.current!)
       pollRef.current = null
 
@@ -48,11 +48,8 @@ export default function BarcodeScannerPage() {
         })
       }
 
-      if (capabilities.torch) {
-        setTorchSupported(true)
-      }
+      if (capabilities.torch) setTorchSupported(true)
 
-      // Foco continuo si está disponible (Android / Chrome)
       if (capabilities.focusMode?.includes?.("continuous")) {
         ;(track.applyConstraints as any)({
           advanced: [{ focusMode: "continuous" }],
@@ -66,7 +63,6 @@ export default function BarcodeScannerPage() {
     }
   }, [getTrack])
 
-  // ─── Zoom ───────────────────────────────────────────────────────────────────
   const applyZoom = useCallback(async (value: number) => {
     setZoom(value)
     const track = getTrack()
@@ -76,7 +72,6 @@ export default function BarcodeScannerPage() {
     } catch (_) {}
   }, [getTrack])
 
-  // ─── Linterna ───────────────────────────────────────────────────────────────
   const toggleTorch = useCallback(async () => {
     const track = getTrack()
     if (!track) return
@@ -87,39 +82,45 @@ export default function BarcodeScannerPage() {
     } catch (_) {}
   }, [torchOn, getTrack])
 
-  // ─── Lectura de código ──────────────────────────────────────────────────────
   const handleUpdate = useCallback(
     (err: unknown, result: any) => {
       if (err || !result) return
 
       const code: string = result.getText()
+
+      // DEBUG — muestra el código crudo en pantalla
+      setDebugCode(`Código: "${code}" | largo: ${code.length}`)
+
       if (!code || code.length < 4) return
       if (code === lastCodeRef.current || isProcessingRef.current) return
 
-      lastCodeRef.current   = code
+      lastCodeRef.current     = code
       isProcessingRef.current = true
 
-      searchByBarcode(code).finally(() => {
-        isProcessingRef.current = false
-
-        if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
-        resetTimerRef.current = setTimeout(() => {
-          lastCodeRef.current = null
-        }, 3000)
-      })
+      searchByBarcode(code)
+        .catch((e: unknown) => {
+          // DEBUG — muestra el error real de la API
+          const msg = e instanceof Error ? e.message : String(e)
+          setDebugError(`Error API: ${msg}`)
+        })
+        .finally(() => {
+          isProcessingRef.current = false
+          if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
+          resetTimerRef.current = setTimeout(() => {
+            lastCodeRef.current = null
+          }, 3000)
+        })
     },
     [searchByBarcode]
   )
 
   return (
     <div className="scanner-page">
-      {/* Header */}
       <div className="scanner-header">
         <h2>Escanear producto</h2>
         <p>Apuntá al código de barras</p>
       </div>
 
-      {/* Cámara */}
       <div
         ref={cameraWrapRef}
         className={`scanner-camera ${product ? "has-result" : ""}`}
@@ -129,7 +130,7 @@ export default function BarcodeScannerPage() {
           height={"100%"}
           onUpdate={handleUpdate}
           facingMode="environment"
-          // @ts-ignore — hints no está en todos los typings pero es válido en ZXing
+          // @ts-ignore
           hints={new Map([
             [2, [
               "CODE_128", "CODE_39", "CODE_93",
@@ -137,12 +138,11 @@ export default function BarcodeScannerPage() {
               "ITF", "CODABAR",
               "QR_CODE", "DATA_MATRIX", "PDF_417", "AZTEC",
             ]],
-            [3, true],           // TRY_HARDER
-            [10, "ISO-8859-1"],  // CHARACTER_SET
+            [3, true],
+            [10, "ISO-8859-1"],
           ])}
         />
 
-        {/* Linterna */}
         {torchSupported && (
           <button
             className={`scanner-torch-btn ${torchOn ? "active" : ""}`}
@@ -154,7 +154,6 @@ export default function BarcodeScannerPage() {
         )}
       </div>
 
-      {/* Zoom — solo aparece en dispositivos que lo soporten (Android / Chrome) */}
       {zoomSupported && (
         <div className="scanner-zoom">
           <span className="zoom-icon">🔍</span>
@@ -171,23 +170,35 @@ export default function BarcodeScannerPage() {
         </div>
       )}
 
-      {/* Panel inferior */}
       <div className="scanner-bottom">
-        {loading && (
-          <p className="scanner-loading">Buscando producto…</p>
-        )}
+
+        {/* ── DEBUG — sacar antes de volver a subir a producción ── */}
+        <div style={{
+          background: "#1e1e1e",
+          color: "#4ade80",
+          fontFamily: "monospace",
+          fontSize: "0.75rem",
+          padding: "8px 12px",
+          borderRadius: "8px",
+          marginBottom: "12px",
+          wordBreak: "break-all",
+          lineHeight: 1.6,
+        }}>
+          <strong style={{ color: "#facc15" }}>🛠 DEBUG</strong><br />
+          {debugCode || "Esperando escaneo…"}<br />
+          {debugError && <span style={{ color: "#f87171" }}>{debugError}</span>}
+        </div>
+        {/* ── FIN DEBUG ── */}
+
+        {loading && <p className="scanner-loading">Buscando producto…</p>}
         {product && !loading && (
           <div className="scanner-result">
             <h3>{product.descripcion}</h3>
-            <p className="price">
-              ${Number(product.precio).toLocaleString()}
-            </p>
+            <p className="price">${Number(product.precio).toLocaleString()}</p>
             <p className="stock">Stock disponible: {product.stock}</p>
           </div>
         )}
-        {error && !loading && (
-          <p className="scanner-error">{error}</p>
-        )}
+        {error && !loading && <p className="scanner-error">{error}</p>}
       </div>
 
       <LogoutButton />
