@@ -26,8 +26,11 @@ export async function getProductByBarcode(
   const data = await res.json()
 
   if (!res.ok) {
-    const token = getToken()
-throw new Error(`${res.status} - token: "${token?.substring(0, 30)}..."`)
+
+     const text = await res.text()
+  throw new Error(`${res.status} | ${text.substring(0, 100)}`)
+/*     const token = getToken()
+throw new Error(`${res.status} - token: "${token?.substring(0, 30)}..."`) */
 /*   throw new Error(`${res.status} - ${data?.error || "Producto no encontrado"}`) */
 }
 
