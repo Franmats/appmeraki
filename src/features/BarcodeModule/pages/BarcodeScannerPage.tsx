@@ -7,116 +7,101 @@ import "./BarcodeScannerPage.css"
 export default function BarcodeScannerPage() {
   const { product, loading, error, searchByBarcode } = useBarcodeScanner()
 
-  const lastCodeRef = useRef<string | null>(null)
-  const isProcessingRef = useRef(false)
-  const streamRef = useRef<MediaStream | null>(null)
-  const resetTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastCodeRef      = useRef<string | null>(null)
+  const isProcessingRef  = useRef(false)
+  const resetTimerRef    = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const cameraWrapRef    = useRef<HTMLDivElement>(null)
+  const pollRef          = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const [zoom, setZoom] = useState(1)
+  const [zoom, setZoom]                   = useState(1)
   const [zoomSupported, setZoomSupported] = useState(false)
-  const [zoomRange, setZoomRange] = useState({ min: 1, max: 4 })
-  const [torchOn, setTorchOn] = useState(false)
+  const [zoomRange, setZoomRange]         = useState({ min: 1, max: 4 })
+  const [torchOn, setTorchOn]             = useState(false)
   const [torchSupported, setTorchSupported] = useState(false)
 
-  // Captura el stream para controlar zoom y linterna
-  useEffect(() => {
-    let active = true
-
-    const initStream = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: "environment" },
-        })
-
-        if (!active) {
-          stream.getTracks().forEach((t) => t.stop())
-          return
-        }
-
-        streamRef.current = stream
-        const track = stream.getVideoTracks()[0]
-        const capabilities = track.getCapabilities() as any
-
-        if (capabilities.zoom) {
-          setZoomSupported(true)
-          setZoomRange({
-            min: capabilities.zoom.min ?? 1,
-            max: Math.min(capabilities.zoom.max ?? 4, 4),
-          })
-        }
-
-        if (capabilities.torch) {
-          setTorchSupported(true)
-        }
-
-        // Intentar foco continuo si está disponible (Android/Chrome)
-        if (capabilities.focusMode?.includes?.("continuous")) {
-          try {
-            await (track.applyConstraints as any)({
-              advanced: [{ focusMode: "continuous" }],
-            })
-          } catch (_) {
-            // Silencioso — no crítico
-          }
-        }
-      } catch (e) {
-        // El componente BarcodeScannerComponent maneja su propio stream
-        // Este stream auxiliar es solo para controles extra
-      }
-    }
-
-    initStream()
-
-    return () => {
-      active = false
-      streamRef.current?.getTracks().forEach((t) => t.stop())
-      streamRef.current = null
-      if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
-    }
+  // ─── Obtiene el track desde el <video> que monta BarcodeScannerComponent ───
+  // No abre un stream propio: reutiliza el que ya existe en el DOM.
+  const getTrack = useCallback((): MediaStreamTrack | null => {
+    const video = cameraWrapRef.current?.querySelector("video")
+    if (!video) return null
+    const stream = (video as HTMLVideoElement & { srcObject?: MediaStream }).srcObject
+    return stream?.getVideoTracks()[0] ?? null
   }, [])
 
+  // Polling hasta que el <video> tenga su stream listo (ocurre unos ms después del mount)
+  useEffect(() => {
+    pollRef.current = setInterval(() => {
+      const track = getTrack()
+      if (!track) return
+
+      // Stream encontrado — dejamos de hacer polling
+      clearInterval(pollRef.current!)
+      pollRef.current = null
+
+      const capabilities = track.getCapabilities() as any
+
+      if (capabilities.zoom) {
+        setZoomSupported(true)
+        setZoomRange({
+          min: capabilities.zoom.min ?? 1,
+          max: Math.min(capabilities.zoom.max ?? 4, 4),
+        })
+      }
+
+      if (capabilities.torch) {
+        setTorchSupported(true)
+      }
+
+      // Foco continuo si está disponible (Android / Chrome)
+      if (capabilities.focusMode?.includes?.("continuous")) {
+        ;(track.applyConstraints as any)({
+          advanced: [{ focusMode: "continuous" }],
+        }).catch(() => {})
+      }
+    }, 300)
+
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+      if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
+    }
+  }, [getTrack])
+
+  // ─── Zoom ───────────────────────────────────────────────────────────────────
   const applyZoom = useCallback(async (value: number) => {
     setZoom(value)
-    const track = streamRef.current?.getVideoTracks()[0]
+    const track = getTrack()
     if (!track) return
     try {
       await (track.applyConstraints as any)({ advanced: [{ zoom: value }] })
     } catch (_) {}
-  }, [])
+  }, [getTrack])
 
+  // ─── Linterna ───────────────────────────────────────────────────────────────
   const toggleTorch = useCallback(async () => {
-    const track = streamRef.current?.getVideoTracks()[0]
+    const track = getTrack()
     if (!track) return
     try {
       const next = !torchOn
       await (track.applyConstraints as any)({ advanced: [{ torch: next }] })
       setTorchOn(next)
     } catch (_) {}
-  }, [torchOn])
+  }, [torchOn, getTrack])
 
+  // ─── Lectura de código ──────────────────────────────────────────────────────
   const handleUpdate = useCallback(
     (err: unknown, result: any) => {
       if (err || !result) return
 
       const code: string = result.getText()
-
-      // Validaciones específicas para Code 128C:
-      // - Solo dígitos
-      // - Longitud par (Code 128C codifica pares)
-      // - Longitud mínima razonable (ajustar según tus códigos)
-      if (!code || code.length < 14) return
-      if (!/^\d+$/.test(code)) return
-      if (code.length % 2 !== 0) return
-
+      if (!code || code.length < 4) return
       if (code === lastCodeRef.current || isProcessingRef.current) return
 
-      lastCodeRef.current = code
+      lastCodeRef.current   = code
       isProcessingRef.current = true
 
       searchByBarcode(code).finally(() => {
         isProcessingRef.current = false
 
-        // Permitir re-escanear el mismo código después de 3s
         if (resetTimerRef.current) clearTimeout(resetTimerRef.current)
         resetTimerRef.current = setTimeout(() => {
           lastCodeRef.current = null
@@ -135,7 +120,10 @@ export default function BarcodeScannerPage() {
       </div>
 
       {/* Cámara */}
-      <div className={`scanner-camera ${product ? "has-result" : ""}`}>
+      <div
+        ref={cameraWrapRef}
+        className={`scanner-camera ${product ? "has-result" : ""}`}
+      >
         <BarcodeScannerComponent
           width={"100%"}
           height={"100%"}
@@ -143,9 +131,14 @@ export default function BarcodeScannerPage() {
           facingMode="environment"
           // @ts-ignore — hints no está en todos los typings pero es válido en ZXing
           hints={new Map([
-            [2, ["CODE_128"]], // POSSIBLE_FORMATS
-            [3, true],         // TRY_HARDER
-            [10, "ISO-8859-1"], // CHARACTER_SET
+            [2, [
+              "CODE_128", "CODE_39", "CODE_93",
+              "EAN_13", "EAN_8", "UPC_A", "UPC_E",
+              "ITF", "CODABAR",
+              "QR_CODE", "DATA_MATRIX", "PDF_417", "AZTEC",
+            ]],
+            [3, true],           // TRY_HARDER
+            [10, "ISO-8859-1"],  // CHARACTER_SET
           ])}
         />
 
@@ -161,7 +154,7 @@ export default function BarcodeScannerPage() {
         )}
       </div>
 
-      {/* Control de zoom — solo en dispositivos que lo soporten (Android/Chrome) */}
+      {/* Zoom — solo aparece en dispositivos que lo soporten (Android / Chrome) */}
       {zoomSupported && (
         <div className="scanner-zoom">
           <span className="zoom-icon">🔍</span>
