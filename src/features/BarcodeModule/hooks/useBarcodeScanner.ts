@@ -16,12 +16,13 @@ export function useBarcodeScanner() {
     try {
       const result = await findProduct(barcode)
       setProduct(result)
-    } catch (e) {
-      if (e instanceof Error && e.message === "PRODUCT_NOT_FOUND") {
-        setError("Producto no encontrado")
-      } else {
-        setError("Producto no encontrado")
-      }
+    }  catch (e) {
+  if (e instanceof Error) {
+    setError(e.message) // ← muestra el mensaje real en pantalla
+  } else {
+    setError(String(e))
+  }
+
     } finally {
       setLoading(false)
     }
