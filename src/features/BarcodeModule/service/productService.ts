@@ -30,5 +30,6 @@ export async function getProductByBarcode(
   throw new Error(`${res.status} - ${data?.error || "Producto no encontrado"}`)
 }
 
+
   return data as Product
 }
