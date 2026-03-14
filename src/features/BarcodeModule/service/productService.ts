@@ -22,12 +22,12 @@ export async function getProductByBarcode(
           },}
     
   )
-
+  const text = await res.text()
   const data = await res.json()
 
   if (!res.ok) {
 
-     const text = await res.text()
+   
   throw new Error(`${res.status} | ${text.substring(0, 100)}`)
 /*     const token = getToken()
 throw new Error(`${res.status} - token: "${token?.substring(0, 30)}..."`) */
