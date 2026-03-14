@@ -13,6 +13,7 @@ export async function getProductByBarcode(
   barcode: string
 ): Promise<Product> {
   const token = getToken();
+  console.log("Token obtenido:", token); // Debug: Verificar el token
    const apiUrl = import.meta.env.VITE_API_URL as string;
   const res = await fetch(
     `${apiUrl}/products/${barcode}`,
