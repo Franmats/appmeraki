@@ -15,7 +15,7 @@ export async function getProductByBarcode(
   const token = getToken();
    const apiUrl = import.meta.env.VITE_API_URL as string;
   const res = await fetch(
-    `${apiUrl}/products/${barcode}`,
+    `${apiUrl}/productos/barras/${barcode}`,
 
     { credentials: "include" , headers: {
             Authorization: `Bearer ${token}`,

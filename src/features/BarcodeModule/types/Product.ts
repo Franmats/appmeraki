@@ -5,4 +5,7 @@ export interface Product {
   codigo: string
   precio: number
   stock:number
+  nombre:string
+  codigo_barras:string
+  rubro:string
 }

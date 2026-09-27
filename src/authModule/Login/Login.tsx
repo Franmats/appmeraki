@@ -63,7 +63,7 @@ export const Login: React.FC = () => {
     setError(null);
     setMessage(null);
     setIsSubmitting(true);
-
+    console.log(apiUrl);
     try {
       const response = await fetch(`${apiUrl}/users/login`, {
         method: "POST",

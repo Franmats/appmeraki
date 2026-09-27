@@ -13,15 +13,25 @@ export default function BarcodeScannerPage() {
   const cameraWrapRef     = useRef<HTMLDivElement>(null)
   const pollRef           = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  const [zoom, setZoom]                     = useState(1)
+  const [zoom, setZoom]                         = useState(1)
   const [zoomSupported, setZoomSupported]   = useState(false)
   const [zoomRange, setZoomRange]           = useState({ min: 1, max: 4 })
   const [torchOn, setTorchOn]               = useState(false)
   const [torchSupported, setTorchSupported] = useState(false)
 
+  // Control para abrir/cerrar el pop-up manualmente con la cruz
+  const [isModalOpen, setIsModalOpen]       = useState(false)
+
   // DEBUG
   const [debugCode, setDebugCode]   = useState<string>("")
   const [debugError, setDebugError] = useState<string>("")
+
+  // Abre el pop-up automáticamente cuando hay carga, producto o error
+  useEffect(() => {
+    if (loading || product || error) {
+      setIsModalOpen(true)
+    }
+  }, [loading, product, error])
 
   const getTrack = useCallback((): MediaStreamTrack | null => {
     const video = cameraWrapRef.current?.querySelector("video")
@@ -88,7 +98,6 @@ export default function BarcodeScannerPage() {
 
       const code: string = result.getText()
 
-      // DEBUG — muestra el código crudo en pantalla
       setDebugCode(`Código: "${code}" | largo: ${code.length}`)
 
       if (!code || code.length < 4) return
@@ -99,7 +108,6 @@ export default function BarcodeScannerPage() {
 
       searchByBarcode(code)
         .catch((e: unknown) => {
-          // DEBUG — muestra el error real de la API
           const msg = e instanceof Error ? e.message : String(e)
           setDebugError(`Error API: ${msg}`)
         })
@@ -114,17 +122,18 @@ export default function BarcodeScannerPage() {
     [searchByBarcode]
   )
 
+  const handleDismiss = () => {
+    setIsModalOpen(false)
+    lastCodeRef.current = null
+  }
+
+  // El pop-up solo se muestra si está abierto por el usuario y hay contenido activo
+  const showPopup = isModalOpen && (loading || product || error)
+
   return (
     <div className="scanner-page">
-      <div className="scanner-header">
-        <h2>Escanear producto</h2>
-        <p>Apuntá al código de barras</p>
-      </div>
-
-      <div
-        ref={cameraWrapRef}
-        className={`scanner-camera ${product ? "has-result" : ""}`}
-      >
+      {/* ── Cámara de Fondo Pantalla Completa ── */}
+      <div ref={cameraWrapRef} className="scanner-camera-fullscreen">
         <BarcodeScannerComponent
           width={"100%"}
           height={"100%"}
@@ -141,7 +150,34 @@ export default function BarcodeScannerPage() {
             [3, true],
             [10, "ISO-8859-1"],
           ])}
+
         />
+        <div className="scanner-overlay-laser"></div>
+      </div>
+
+      {/* ── Header flotante ── */}
+      <div className="scanner-header-floating">
+        <h2>Escanear producto</h2>
+        <p>Apuntá al código dentro del recuadro</p>
+      </div>
+
+      {/* ── Controles flotantes (Linterna y Zoom) ── */}
+      <div className="scanner-controls-floating">
+        {zoomSupported && (
+          <div className="scanner-zoom-pill">
+            <span className="zoom-icon">🔍</span>
+            <input
+              type="range"
+              min={zoomRange.min}
+              max={zoomRange.max}
+              step={0.1}
+              value={zoom}
+              onChange={(e) => applyZoom(Number(e.target.value))}
+              aria-label="Zoom de la cámara"
+            />
+            <span className="zoom-label">{zoom.toFixed(1)}×</span>
+          </div>
+        )}
 
         {torchSupported && (
           <button
@@ -154,54 +190,45 @@ export default function BarcodeScannerPage() {
         )}
       </div>
 
-      {zoomSupported && (
-        <div className="scanner-zoom">
-          <span className="zoom-icon">🔍</span>
-          <input
-            type="range"
-            min={zoomRange.min}
-            max={zoomRange.max}
-            step={0.1}
-            value={zoom}
-            onChange={(e) => applyZoom(Number(e.target.value))}
-            aria-label="Zoom de la cámara"
-          />
-          <span className="zoom-label">{zoom.toFixed(1)}×</span>
-        </div>
-      )}
-
-      <div className="scanner-bottom">
-
-        {/* ── DEBUG — sacar antes de volver a subir a producción ── */}
-        <div style={{
-          background: "#1e1e1e",
-          color: "#4ade80",
-          fontFamily: "monospace",
-          fontSize: "0.75rem",
-          padding: "8px 12px",
-          borderRadius: "8px",
-          marginBottom: "12px",
-          wordBreak: "break-all",
-          lineHeight: 1.6,
-        }}>
-          <strong style={{ color: "#facc15" }}>🛠 DEBUG</strong><br />
-          {debugCode || "Esperando escaneo…"}<br />
-          {debugError && <span style={{ color: "#f87171" }}>{debugError}</span>}
-        </div>
-        {/* ── FIN DEBUG ── */}
-
-        {loading && <p className="scanner-loading">Buscando producto…</p>}
-        {product && !loading && (
-          <div className="scanner-result">
-            <h3>{product.descripcion}</h3>
-            <p className="price">${Number(product.precio).toLocaleString()}</p>
-            <p className="stock">Stock disponible: {product.stock}</p>
-          </div>
-        )}
-        {error && !loading && <p className="scanner-error">{error}</p>}
+      {/* ── Botón Logout flotante ── */}
+      <div className="scanner-logout-floating">
+        <LogoutButton />
       </div>
 
-      <LogoutButton />
+      {/* ── Pop-up / Bottom Sheet de Resultados ── */}
+      {showPopup && (
+        <div className="scanner-popup-backdrop">
+          <div className="scanner-popup-card">
+            <button className="popup-close-btn" onClick={handleDismiss} aria-label="Cerrar">
+              ✕
+            </button>
+
+            {/* DEBUG (Puedes removerlo en producción limpia) */}
+            <div className="scanner-debug-box">
+              <strong style={{ color: "#facc15" }}>🛠 DEBUG</strong><br />
+              {debugCode || "Esperando escaneo…"}<br />
+              {debugError && <span style={{ color: "#f87171" }}>{debugError}</span>}
+            </div>
+
+            {loading && <p className="scanner-loading">Buscando producto…</p>}
+            
+            {product && !loading && (
+              <div className="scanner-result">
+                <h3>{product.nombre}</h3>
+                <p className="description">{product.descripcion}</p>
+                <p className="price">${Number(product.precio).toLocaleString()}</p>
+                <div className="product-meta">
+                  <p><b>Stock:</b> {product.stock || "Sin datos"}</p>
+                  <p><b>Código:</b> {product.codigo_barras || "Sin datos"}</p>
+                  <p><b>Rubro:</b> {product.rubro || "Sin datos"}</p>
+                </div>
+              </div>
+            )}
+
+            {error && !loading && <p className="scanner-error">{error}</p>}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
