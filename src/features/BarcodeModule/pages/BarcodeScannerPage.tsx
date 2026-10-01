@@ -242,7 +242,6 @@ export default function BarcodeScannerPage() {
                   <span className="scanner-not-found__icon" aria-hidden="true">🔎</span>
                   <p className="scanner-not-found__title">Código leído, pero no está cargado en el sistema</p>
                   {lastScannedCode && <p className="scanner-not-found__code">{lastScannedCode}</p>}
-                  <p className="scanner-not-found__hint">Pedile a un encargado que lo cargue y volvé a escanear.</p>
                 </div>
               ) : (
                 <p className="scanner-error">{error}</p>
