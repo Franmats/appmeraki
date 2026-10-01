@@ -27,9 +27,9 @@ export function useBarcodeScanner() {
         setNotFound(true)
         setError("Producto no encontrado en el sistema")
       } else if (e instanceof Error) {
-        setError("Error en la conexión, por favor inténtelo de nuevo o contacte al administrador") // ← muestra el mensaje real en pantalla
+        setError(e.message) // ← muestra el mensaje real en pantalla
       } else {
-        setError(String(e))
+        setError("Error en la conexión, contactá a un encargado o volvé a intentar más tarde")
       }
     } finally {
       setLoading(false)
