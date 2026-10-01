@@ -6,6 +6,8 @@
   background: #000;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: hidden;
+  overscroll-behavior: none;
+  touch-action: manipulation;
 }
 
 /* === Cámara Fondo Total === */
@@ -62,7 +64,7 @@
 /* === Header Flotante === */
 .scanner-header-floating {
   position: absolute;
-  top: 1rem;
+  top: calc(1rem + env(safe-area-inset-top, 0px));
   left: 50%;
   transform: translateX(-50%);
   text-align: center;
@@ -92,7 +94,7 @@
 /* === Controles Flotantes (Zoom & Linterna) === */
 .scanner-controls-floating {
   position: absolute;
-  bottom: 2rem;
+  bottom: calc(2rem + env(safe-area-inset-bottom, 0px));
   left: 50%;
   transform: translateX(-50%);
   display: flex;
@@ -123,12 +125,45 @@
 .scanner-zoom-pill input[type="range"] {
   flex: 1;
   height: 4px;
-  appearance: none;
   -webkit-appearance: none;
+  appearance: none;
   background: rgba(255, 255, 255, 0.3);
   border-radius: 2px;
   outline: none;
   accent-color: #22c55e;
+}
+
+/* Thumb del slider: por defecto el navegador lo dibuja sin estilo propio,
+   así que le damos uno consistente con el resto de la UI. */
+.scanner-zoom-pill input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.55);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.scanner-zoom-pill input[type="range"]:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+.scanner-zoom-pill input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.55);
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.scanner-zoom-pill input[type="range"]:active::-moz-range-thumb {
+  transform: scale(1.15);
 }
 
 .zoom-label {
@@ -136,23 +171,25 @@
   color: #fff;
   min-width: 32px;
   text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 .scanner-torch-btn {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   border-radius: 50%;
   border: none;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: transform 0.15s;
+  transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
   flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
 .scanner-torch-btn:active {
@@ -160,14 +197,20 @@
 }
 
 .scanner-torch-btn.active {
-  background: rgba(250, 204, 21, 0.4);
-  box-shadow: 0 0 12px rgba(250, 204, 21, 0.6);
+  background: rgba(250, 204, 21, 0.5);
+  box-shadow: 0 0 15px rgba(250, 204, 21, 0.8);
+  animation: torchPulse 1.6s ease-in-out infinite;
+}
+
+@keyframes torchPulse {
+  0%, 100% { box-shadow: 0 0 15px rgba(250, 204, 21, 0.8); }
+  50% { box-shadow: 0 0 22px rgba(250, 204, 21, 0.5); }
 }
 
 .scanner-logout-floating {
   position: absolute;
-  top: 1rem;
-  right: 1rem;
+  top: calc(1rem + env(safe-area-inset-top, 0px));
+  right: calc(1rem + env(safe-area-inset-right, 0px));
   z-index: 10;
 }
 
@@ -190,7 +233,8 @@
   border-top-left-radius: 1.5rem;
   border-top-right-radius: 1.5rem;
   padding: 1.5rem;
-  box-init: 0 -10px 25px rgba(0, 0, 0, 0.2);
+  padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -10px 25px rgba(0, 0, 0, 0.2);
   max-height: 80dvh;
   overflow-y: auto;
   position: relative;
@@ -212,6 +256,12 @@
   align-items: center;
   justify-content: center;
   color: #4b5563;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.popup-close-btn:active {
+  transform: scale(0.9);
+  background: #e5e7eb;
 }
 
 @keyframes fadeIn {
@@ -224,6 +274,26 @@
   to { transform: translateY(0); }
 }
 
+/* En pantallas más anchas (tablets) centramos la tarjeta en vez de
+   estirarla de punta a punta y la hacemos aparecer con un pop sutil. */
+@media (min-width: 640px) {
+  .scanner-popup-backdrop {
+    align-items: center;
+    justify-content: center;
+  }
+
+  .scanner-popup-card {
+    max-width: 420px;
+    border-radius: 1.5rem;
+    animation: popInCard 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes popInCard {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+}
+
 /* === Contenido del Pop-up === */
 .scanner-debug-box {
   background: #1e1e1e;
@@ -231,22 +301,60 @@
   font-family: monospace;
   font-size: 0.75rem;
   padding: 8px 12px;
-  borderRadius: 8px;
+  border-radius: 8px;
   margin-bottom: 12px;
   word-break: break-all;
   line-height: 1.5;
 }
 
 .scanner-loading {
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1.5rem 0;
+}
+
+.scanner-loading p {
+  margin: 0;
   font-size: 1rem;
   font-weight: 500;
   color: #2563eb;
-  padding: 1rem 0;
+}
+
+.scanner-spinner {
+  width: 28px;
+  height: 28px;
+  border: 3px solid #dbeafe;
+  border-top-color: #2563eb;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .scanner-result {
   text-align: left;
+}
+
+.scanner-result h3,
+.scanner-result .description,
+.scanner-result .price,
+.scanner-result .product-meta {
+  opacity: 0;
+  animation: resultFadeUp 0.35s ease forwards;
+}
+
+.scanner-result h3 { animation-delay: 0.05s; }
+.scanner-result .description { animation-delay: 0.12s; }
+.scanner-result .price { animation-delay: 0.19s; }
+.scanner-result .product-meta { animation-delay: 0.26s; }
+
+@keyframes resultFadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .scanner-result h3 {
@@ -290,82 +398,47 @@
   color: #dc2626;
   font-weight: 500;
   padding: 1rem 0;
+  animation: shakeError 0.4s ease;
 }
 
-
-/* === Controles Flotantes (Zoom & Linterna) === */
-.scanner-controls-floating {
-  position: absolute;
-  /* Lo ubicamos justo arriba de donde sale el pop-up o en la parte baja de la cámara */
-  bottom: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  z-index: 10;
-  width: 90%;
-  max-width: 400px;
-  justify-content: center;
+.scanner-error::before {
+  content: "⚠️ ";
 }
 
-.scanner-zoom-pill {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-radius: 2rem;
+@keyframes shakeError {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
 }
 
-.zoom-icon {
-  font-size: 0.9rem;
+/* === Accesibilidad: foco visible por teclado === */
+.scanner-torch-btn:focus-visible,
+.popup-close-btn:focus-visible,
+.scanner-zoom-pill input[type="range"]:focus-visible {
+  outline: 2px solid #22c55e;
+  outline-offset: 2px;
 }
 
-.scanner-zoom-pill input[type="range"] {
-  flex: 1;
-  height: 4px;
-  appearance: none;
-  -webkit-appearance: none;
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 2px;
-  outline: none;
-  accent-color: #22c55e;
-}
+/* === Respeta la preferencia del sistema de reducir animaciones === */
+@media (prefers-reduced-motion: reduce) {
+  .scanner-overlay-laser,
+  .scanner-popup-backdrop,
+  .scanner-popup-card,
+  .scanner-spinner,
+  .scanner-error,
+  .scanner-torch-btn.active,
+  .scanner-result h3,
+  .scanner-result .description,
+  .scanner-result .price,
+  .scanner-result .product-meta {
+    animation: none !important;
+  }
 
-.zoom-label {
-  font-size: 0.75rem;
-  color: #fff;
-  min-width: 32px;
-  text-align: right;
-}
-
-.scanner-torch-btn {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  font-size: 1.3rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: transform 0.15s;
-  flex-shrink: 0;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-}
-
-.scanner-torch-btn:active {
-  transform: scale(0.9);
-}
-
-.scanner-torch-btn.active {
-  background: rgba(250, 204, 21, 0.5);
-  box-shadow: 0 0 15px rgba(250, 204, 21, 0.8);
+  .scanner-result h3,
+  .scanner-result .description,
+  .scanner-result .price,
+  .scanner-result .product-meta {
+    opacity: 1;
+  }
 }

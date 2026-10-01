@@ -5,7 +5,7 @@ import { LogoutButton } from "../../../LogoutButton/LogoutButton"
 import "./BarcodeScannerPage.css"
 
 export default function BarcodeScannerPage() {
-  const { product, loading, error, searchByBarcode } = useBarcodeScanner()
+  const { product, loading, error, notFound, searchByBarcode } = useBarcodeScanner()
 
   const lastCodeRef       = useRef<string | null>(null)
   const isProcessingRef   = useRef(false)
@@ -19,17 +19,27 @@ export default function BarcodeScannerPage() {
   const [torchOn, setTorchOn]               = useState(false)
   const [torchSupported, setTorchSupported] = useState(false)
 
-  // Control para abrir/cerrar el pop-up manualmente con la cruz
   const [isModalOpen, setIsModalOpen]       = useState(false)
 
-  // DEBUG
+  // Cambia en cada resultado nuevo para poder re-disparar las animaciones
+  // de entrada aunque el pop-up ya esté abierto (ej: escaneás otro código
+  // sin cerrar el anterior).
+  const [scanToken, setScanToken] = useState(0)
+
+  // Último código efectivamente procesado (distinto del DEBUG: este sí se
+  // usa en producción, para poder mostrárselo al usuario cuando el código
+  // se lee bien pero el producto no está cargado en el sistema).
+  const [lastScannedCode, setLastScannedCode] = useState<string>("")
+
+  // DEBUG — queda disponible para desarrollo pero nunca se muestra en producción.
   const [debugCode, setDebugCode]   = useState<string>("")
   const [debugError, setDebugError] = useState<string>("")
+  const isDev = import.meta.env.DEV
 
-  // Abre el pop-up automáticamente cuando hay carga, producto o error
   useEffect(() => {
     if (loading || product || error) {
       setIsModalOpen(true)
+      setScanToken((n) => n + 1)
     }
   }, [loading, product, error])
 
@@ -105,6 +115,7 @@ export default function BarcodeScannerPage() {
 
       lastCodeRef.current     = code
       isProcessingRef.current = true
+      setLastScannedCode(code)
 
       searchByBarcode(code)
         .catch((e: unknown) => {
@@ -127,12 +138,10 @@ export default function BarcodeScannerPage() {
     lastCodeRef.current = null
   }
 
-  // El pop-up solo se muestra si está abierto por el usuario y hay contenido activo
   const showPopup = isModalOpen && (loading || product || error)
 
   return (
     <div className="scanner-page">
-      {/* ── Cámara de Fondo Pantalla Completa ── */}
       <div ref={cameraWrapRef} className="scanner-camera-fullscreen">
         <BarcodeScannerComponent
           width={"100%"}
@@ -155,13 +164,11 @@ export default function BarcodeScannerPage() {
         <div className="scanner-overlay-laser"></div>
       </div>
 
-      {/* ── Header flotante ── */}
       <div className="scanner-header-floating">
         <h2>Escanear producto</h2>
         <p>Apuntá al código dentro del recuadro</p>
       </div>
 
-      {/* ── Controles flotantes (Linterna y Zoom) ── */}
       <div className="scanner-controls-floating">
         {zoomSupported && (
           <div className="scanner-zoom-pill">
@@ -190,28 +197,32 @@ export default function BarcodeScannerPage() {
         )}
       </div>
 
-      {/* ── Botón Logout flotante ── */}
       <div className="scanner-logout-floating">
         <LogoutButton />
       </div>
 
-      {/* ── Pop-up / Bottom Sheet de Resultados ── */}
       {showPopup && (
         <div className="scanner-popup-backdrop">
-          <div className="scanner-popup-card">
+          <div className="scanner-popup-card" key={scanToken}>
             <button className="popup-close-btn" onClick={handleDismiss} aria-label="Cerrar">
               ✕
             </button>
 
-            {/* DEBUG (Puedes removerlo en producción limpia) */}
-            <div className="scanner-debug-box">
-              <strong style={{ color: "#facc15" }}>🛠 DEBUG</strong><br />
-              {debugCode || "Esperando escaneo…"}<br />
-              {debugError && <span style={{ color: "#f87171" }}>{debugError}</span>}
-            </div>
+            {isDev && (
+              <div className="scanner-debug-box">
+                <strong style={{ color: "#facc15" }}>🛠 DEBUG</strong><br />
+                {debugCode || "Esperando escaneo…"}<br />
+                {debugError && <span style={{ color: "#f87171" }}>{debugError}</span>}
+              </div>
+            )}
 
-            {loading && <p className="scanner-loading">Buscando producto…</p>}
-            
+            {loading && (
+              <div className="scanner-loading">
+                <span className="scanner-spinner" aria-hidden="true" />
+                <p>Buscando producto…</p>
+              </div>
+            )}
+
             {product && !loading && (
               <div className="scanner-result">
                 <h3>{product.nombre}</h3>
@@ -225,7 +236,18 @@ export default function BarcodeScannerPage() {
               </div>
             )}
 
-            {error && !loading && <p className="scanner-error">{error}</p>}
+            {error && !loading && (
+              notFound ? (
+                <div className="scanner-not-found">
+                  <span className="scanner-not-found__icon" aria-hidden="true">🔎</span>
+                  <p className="scanner-not-found__title">Código leído, pero no está cargado en el sistema</p>
+                  {lastScannedCode && <p className="scanner-not-found__code">{lastScannedCode}</p>}
+                  <p className="scanner-not-found__hint">Pedile a un encargado que lo cargue y volvé a escanear.</p>
+                </div>
+              ) : (
+                <p className="scanner-error">{error}</p>
+              )
+            )}
           </div>
         </div>
       )}
